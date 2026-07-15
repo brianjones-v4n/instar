@@ -10,8 +10,8 @@ name: Docs Coverage Weekly Audit
 
 on:
   schedule:
-    # Monday 10:00 UTC — quiet time across most timezones.
-    - cron: '0 10 * * 1'
+    # Tuesday night US Central (22:00 CDT = Wed 03:00 UTC).
+    - cron: '0 3 * * 3'
   # Allow manual triggers for ad-hoc checks.
   workflow_dispatch:
 
@@ -51,6 +51,18 @@ jobs:
           REPORT_PATH=".instar/docs-coverage.md"
           if [ ! -f "$REPORT_PATH" ]; then
             echo "No coverage report — skipping issue update."
+            exit 0
+          fi
+          # Issues may be disabled on this repo (e.g. a public mirror). If so,
+          # surface the report in the job summary instead of failing the job.
+          HAS_ISSUES="$(gh repo view --json hasIssuesEnabled --jq '.hasIssuesEnabled')"
+          if [ "$HAS_ISSUES" != "true" ]; then
+            echo "Issues disabled on this repo — report is in the artifact and job summary."
+            {
+              echo "## Weekly docs coverage snapshot — $(date -u +%Y-%m-%d)"
+              echo
+              cat "$REPORT_PATH"
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           # Find an open issue tagged with our marker label, or create one.
